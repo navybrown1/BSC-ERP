@@ -1,0 +1,29 @@
+name: Assemble audited BSC ERP release
+on:
+  push:
+    branches: [main]
+    paths: ['RELEASE-READY']
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble and verify release archive
+        run: |
+          cat .release-parts/part-*.b64 > /tmp/bsc-release.b64
+          base64 --decode /tmp/bsc-release.b64 > /tmp/BSC-ERP-release.zip
+          echo "b0c4f0bce584610082ae6e686ab4a29cef17530899093d91c8c85c7300218dd4  /tmp/BSC-ERP-release.zip" | sha256sum -c -
+      - name: Expand source tree
+        run: |
+          unzip -o /tmp/BSC-ERP-release.zip -d .
+          rm -rf .release-parts RELEASE-READY .github-initialized .github/workflows/assemble-release.yml
+      - name: Commit audited source
+        run: |
+          git config user.name "BSC ERP Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Release: audited BSC ERP installable source"
+          git push origin HEAD:main
